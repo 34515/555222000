@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>偷偷喜欢你的小页面</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI","PingFang SC",sans-serif;
+    }
+    body {
+      background: #F4D7DF;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      position: relative;
+      transition: filter .5s ease;
+    }
+    /* 点击“不要”时屏幕变暗 */
+    body.sad-mode {
+      filter: brightness(0.6);
+    }
+    /* 雨滴容器和样式 */
+    #rain {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 100;
+    }
+    @keyframes fall { to { transform: translateY(100vh); } }
+    .drop {
+      position: absolute; top: -10px;
+      width: 2px; height: 10px;
+      background: rgba(0,150,255,0.8);
+      animation: fall linear forwards;
+    }
+
+    /* 弹幕容器和动画 */
+    #danmaku {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 200;
+    }
+    @keyframes leftToRight {
+      from { transform: translateX(-100%); }
+      to   { transform: translateX(100vw); }
+    }
+    @keyframes rightToLeft {
+      from { transform: translateX(100vw); }
+      to   { transform: translateX(-100%); }
+    }
+    .danmaku-item {
+      position: absolute;
+      white-space: nowrap;
+      font-size: 24px;
+      color: #fff;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    /* 图片始终最顶层、可见但不拦截点击 */
+    #catImg {
+      width: 180px;
+      margin: 40px auto;
+      position: relative;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    h2 {
+      color: #59475E;
+      font-size: 30px;
+      margin: 10px 0 60px;
+      text-align: center;
+      position: relative;
+      z-index: 300;
+    }
+
+    /* 按钮区域放在图片之下 */
+    .btn-area {
+      display: flex;
+      gap: 30px;
+      position: relative;
+      z-index: 100;
+    }
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 14px 28px;
+      font-size: 22px;
+      cursor: pointer;
+      transition: all .2s ease;
+      position: relative;
+      z-index: 100;
+    }
+    #yes { background: #D37787; color: #fff; }
+    #no  { background: #667EA7; color: #fff; }
+  </style>
+
+  <!-- 烟花特效库 -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <div id="rain"></div>
+  <div id="danmaku"></div>
+
+  <!-- 图片永远最顶层 -->
+  <img id="catImg" src="static/cat-happy-1.jpg" alt="cute cat">
+  <h2>亲爱的怡怡，可以成为我的恋人吗？</h2>
+
+  <div class="btn-area">
+    <button id="yes">可以</button>
+    <button id="no">不要</button>
+  </div>
+
+  <script>
+    const catImg = document.getElementById('catImg');
+    const yes    = document.getElementById('yes');
+    const no     = document.getElementById('no');
+    let happyClicked = false;
+    let sadCount     = 0;
+    let scale        = 1;
+
+    function enlargeYes() {
+      scale *= 3;
+      yes.style.transform = `scale(${scale})`;
+    }
+
+    function createDanmaku(text, dir) {
+      const span = document.createElement('span');
+      span.textContent = text;
+      span.className = 'danmaku-item';
+      span.style.top = Math.random()*(window.innerHeight-50) + 'px';
+      span.style.animation = dir==='ltr'
+        ? 'leftToRight 4s linear forwards'
+        : 'rightToLeft 4s linear forwards';
+      document.getElementById('danmaku').appendChild(span);
+      span.addEventListener('animationend', () => span.remove());
+    }
+
+    yes.addEventListener('click', () => {
+      if (!happyClicked) {
+        catImg.src = 'static/cat-happy-2.jpg';
+        happyClicked = true;
+      }
+      enlargeYes();
+      const r = yes.getBoundingClientRect();
+      confetti({
+        particleCount:60, spread:90, startVelocity:30,
+        origin:{ x:(r.left+r.width/2)/window.innerWidth, y:(r.top+r.height/2)/window.innerHeight },
+        colors:['#00aaff','#66ddff']
+      });
+      createDanmaku('我也喜欢怡怡','ltr');
+    });
+
+    no.addEventListener('click', () => {
+      sadCount++;
+      if (sadCount===1)      catImg.src='static/cat-sad-1.jpg';
+      else if (sadCount===2) catImg.src='static/cat-sad-2.jpg';
+      else                   catImg.src='static/cat-sad-3.jpg';
+
+      const x = Math.random()*80+10, y = Math.random()*80+10;
+      no.style.position = 'fixed';
+      no.style.left     = `${x}vw`;
+      no.style.top      = `${y}vh`;
+
+      enlargeYes();
+      createDanmaku('那很坏啦','rtl');
+
+      document.body.classList.add('sad-mode');
+      const rain = document.getElementById('rain');
+      for (let i=0; i<100; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'drop';
+        drop.style.left = Math.random()*100+'vw';
+        drop.style.animationDuration = 1+Math.random()+'s';
+        rain.appendChild(drop);
+        drop.addEventListener('animationend', ()=>drop.remove());
+      }
+      setTimeout(()=>document.body.classList.remove('sad-mode'), 2000);
+    });
+  </script>
+</body>
+</html>
